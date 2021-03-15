@@ -32,10 +32,6 @@ app.use(function validateBearerToken(req, res, next) {
 
 app.use(bookmarksRouter)
 
-app.get('/', (req, res) => {
-    res.send('Hello, world!')
-})
-
 //Error handler middleware (hide error messages from users)
 app.use(function errorHandler(error, req, res, next) {
     let response
