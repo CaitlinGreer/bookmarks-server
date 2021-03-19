@@ -1,7 +1,8 @@
 const express = require('express')
 const { v4: uuid } = require('uuid')
 const logger = require('../logger')
-const bookmarks = require('../store')
+const store = require('../store')
+const BookmarksService = require('./bookmarks-service')
 
 const bookmarksRouter = express.Router()
 const bodyParser = express.json()
@@ -9,8 +10,12 @@ const bodyParser = express.json()
 bookmarksRouter
     .route('/bookmarks')
     .get((req, res, next) => {
-        res
-            .json(bookmarks)
+        const knexInstance = req.app.get('db')
+        BookmarksService.getAllBookmarks(knexInstance)
+            .then(bookmarks => {
+                res.json(bookmarks)
+            })
+            .catch(next)
     })
 
     .post(bodyParser, (req, res) => {
@@ -51,7 +56,7 @@ bookmarksRouter
             rating
         }
     
-        bookmarks.push(bookmark)
+        store.bookmarks.push(bookmark)
     
         logger.info(`Bookmark with id ${id} created.`)
     
@@ -79,7 +84,7 @@ bookmarksRouter
         .delete((req, res) => {
             const { id } = req.params
 
-            const bookmarkIndex = bookmarks.findIndex( b => b.id == id)
+            const bookmarkIndex = store.bookmarks.findIndex( b => b.id == id)
 
             if (bookmarkIndex === -1) {
                 logger.error(`Bookmark with id ${id} not found`)
@@ -88,7 +93,7 @@ bookmarksRouter
                     .send('Bookmark Not found')
             }
 
-            bookmarks.splice(bookmarkIndex, 1)
+            store.bookmarks.splice(bookmarkIndex, 1)
 
             logger.info(`Bookmark with id ${id} deleted`)
 
