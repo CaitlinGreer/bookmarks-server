@@ -6,4 +6,4 @@ const bookmarks = [{
     id: 1
 }]
 
-module.exports = bookmarks
+module.exports = { bookmarks }
