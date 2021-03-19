@@ -8,7 +8,7 @@ const bodyParser = express.json()
 
 bookmarksRouter
     .route('/bookmarks')
-    .get((req, res) => {
+    .get((req, res, next) => {
         res
             .json(bookmarks)
     })
