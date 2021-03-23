@@ -79,7 +79,7 @@ describe.only('Bookmarks Endpoints', function () {
     })
 
     describe.only(`POST /bookmarks`, () => {
-        it(`creates a bookmark, responding with 201 and the new bookmark`, function() {
+        it(`creates a bookmark, responding with 201 and the new bookmark`, () => {
             const newBookmark = {
                 title: "Test New Bookmark",
                 url: 'www.test-url.com',
@@ -88,8 +88,8 @@ describe.only('Bookmarks Endpoints', function () {
             }
             return supertest(app)
                 .post('/bookmarks')
-                .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
                 .send(newBookmark)
+                .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
                 .expect(201)
                 .expect(res => {
                     expect(res.body.title).to.eql(newBookmark.title)
@@ -105,6 +105,56 @@ describe.only('Bookmarks Endpoints', function () {
                     .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
                     .expect(postRes.body)
                 )
+        })
+        it(`responds with 400 and an error message when the 'title' is missing`, () => {
+            return supertest(app)
+                .post('/bookmarks')
+                .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+                .send({
+                    url: 'www.test-url.com',
+                    description: 'Test new description...',
+                    rating: 1,
+                })
+                .expect(400, {
+                    error: { message: `Missing 'title' in request body` }
+                })
+        })
+        it(`responds with 400 and an error message when the 'url' is missing`, () => {
+            return supertest(app)
+                .post('/bookmarks')
+                .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+                .send({
+                    title: 'Test New Bookmark',
+                    description: 'Test new description...',
+                    rating: 1,
+                })
+                .expect(400, {
+                    error: { message: `Missing 'url' in request body` }
+                })
+        })
+        it(`responds with 400 and an error message when the 'rating' is missing`, () => {
+            return supertest(app)
+                .post('/bookmarks')
+                .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+                .send({
+                    title: 'Test New Bookmark',
+                    description: 'Test new description...',
+                    rating: 1,
+                })
+                .expect(400, {
+                    error: { message: `Missing 'url' in request body` }
+                })
+        })
+        it(`responds with 400 and an error message if 'rating' is not between 0 and 5`, () => {
+            return supertest(app)
+                .post('/bookmarks')
+                .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+                .send({
+                    title: 'Test New Bookmark',
+                    url: 'www.test-url.com',
+                    description: 'Test new description...',
+                    rating: 'invalid',
+                })
         })
     })
 })
