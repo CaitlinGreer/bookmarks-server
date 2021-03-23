@@ -8,7 +8,7 @@ const bookmarksRouter = express.Router()
 const bodyParser = express.json()
 
 bookmarksRouter
-    .route('/bookmarks')
+    .route('/')
     .get((req, res, next) => {
         const knexInstance = req.app.get('db')
         BookmarksService.getAllBookmarks(knexInstance)
@@ -18,55 +18,24 @@ bookmarksRouter
             .catch(next)
     })
 
-    .post(bodyParser, (req, res) => {
-        const { title, url, description, rating } = req.body 
-
-        if (!title) {
-            logger.error(`Title is required`)
-            return res
-                .status(400)
-                .send('Title is required')
-        }
-        if (!url) {
-            logger.error(`url is required`)
-            return res
-                .status(400)
-                .send('Url is required')
-        }
-        if (description.length < 1){
-            logger.error(`Description is required`)
-            return res
-                .status(400)
-                .send('Description must be at least 1 character')
-        }
-        if ((rating && rating < 1) || rating > 5) {
-            logger.error(`Rating should be number between 1 and 5`)
-            return res
-                .status(400)
-                .send('Rating should be a number between 1 and 5, if provided')
-        }
-    
-        const id = uuid()
-    
-        const bookmark = {
-            id,
-            title,
-            url,
-            description,
-            rating
-        }
-    
-        store.bookmarks.push(bookmark)
-    
-        logger.info(`Bookmark with id ${id} created.`)
-    
-        res
-            .status(201)
-            .location(`http://localhost:8000/card/${id}`)
-            .json(bookmark)
+    .post(bodyParser, (req, res, next) => {
+        const { title, url, description, rating } = req.body
+        const newBookmark = { title, url, description, rating }   
+        BookmarksService.insertBookmark(
+            req.app.get('db'),
+            newBookmark
+        )
+            .then(bookmark => {
+                res 
+                    .status(201)
+                    .location(`/bookmarks/${bookmark.id}`)
+                    .json(bookmark)
+            })
+            .catch(next)
     })
 
-    bookmarksRouter
+
+ookmarksRouter
         .route('/bookmarks/:id')
         .get((req, res, next) => {
             const knexInstance = req.app.get('db')
