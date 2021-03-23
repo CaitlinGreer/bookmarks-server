@@ -6,10 +6,9 @@ const helmet = require('helmet')
 const { NODE_ENV } = require('./config')
 const logger = require('./logger')
 const bookmarksRouter = require('./bookmarks/bookmarks-router')
-const BookmarksService = require('./bookmarks/bookmarks-service')
+
 
 const app = express()
-const jsonParser = express.json()
 
 const morganOption = (NODE_ENV === 'production')
   ? 'tiny'
@@ -32,24 +31,7 @@ app.use(function validateBearerToken(req, res, next) {
     next()
 })
 
-app.use(bookmarksRouter)
-
-app.post('/bookmarks', jsonParser, (req, res, next) => {
-    const { title, url, description, rating } = req.body
-    const newBookmark = { title, url, description, rating }   
-    BookmarksService.insertBookmark(
-        req.app.get('db'),
-        newBookmark
-    )
-        .then(bookmark => {
-            res 
-                .status(201)
-                .location(`/bookmarks/${bookmark.id}`)
-                .json(bookmark)
-        })
-        .catch(next)
-})
-
+app.use('/bookmarks', bookmarksRouter)
 
 //Error handler middleware (hide error messages from users)
 app.use(function errorHandler(error, req, res, next) {
