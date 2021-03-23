@@ -7,69 +7,50 @@ const BookmarksService = require('./bookmarks-service')
 const bookmarksRouter = express.Router()
 const bodyParser = express.json()
 
-bookmarksRouter
-    .route('/')
-    .get((req, res, next) => {
-        const knexInstance = req.app.get('db')
-        BookmarksService.getAllBookmarks(knexInstance)
-            .then(bookmarks => {
-                res.json(bookmarks)
-            })
-            .catch(next)
-    })
+bookmarksRouter // /bookmarks route
+  .route('/')
 
-    .post(bodyParser, (req, res, next) => {
-        for (const field of ['title', 'url', 'rating']) {
-            if(!req.body[field]) {
-                logger.error(`'${field}' is required`)
-                return res.status(400).send({
-                    error: { message: `'${field}' is required` }
-                })
-            }
-        }
-              
-        const { title, url, description, rating } = req.body
+  .get((req, res, next) => { // GET
+    BookmarksService.getAllBookmarks(req.app.get('db'))
+      .then(bookmarks => {
+        res.json(bookmarks)
+      })
+      .catch(next)
+  })
 
-        const ratingNum = Number(rating)
+  .post(bodyParser, (req, res, next) => { // POST
+    const { title, url, description, rating } = req.body
+    const newBookmark = { title, url, description, rating }
 
-        if(!Number.isInteger(ratingNum) || ratingNum > 5 || ratingNum < 0) {
+    for (const [key, value] of Object.entries(newBookmark))
+      if (value == null)
+        return res.status(400).json({
+          error: { message: `Missing '${key}' in request body` }
+        })
+      
+      const ratingNum = Number(rating)
+
+      if(!Number.isInteger(ratingNum) || ratingNum > 5 || ratingNum < 0) {
             logger.error(`Invalid rating '${rating}' supplied`)
             return res.status(400).send({
                 error: { message: `'rating' must be a number between 0 and 5`}
             })
         }
-
-           const newBookmark = { title, url, description, rating }   
-
-        if(!title) {
-            return res.status(400).json({
-                error: { message: `Missing 'title' in request body` }
-            })
-        }
-
-        if(!url) {
-            return res.status(400).json({
-                error: { message: `Missing 'url' in request body` }
-            })
-        }
-
-        if(!rating) {
-
-        }
-
-        BookmarksService.insertBookmark(
-            req.app.get('db'),
-            newBookmark
-            )
-            .then(bookmark => {
-                res
-                  .status(201)
-                  .json(bookmark)
-            })
-            .catch(next)
+      
+    BookmarksService.insertBookmark(
+        req.app.get('db'),
+        newBookmark
+      )
+        .then(bookmark => {
+          logger.info(`Bookmark with id ${bookmark.id} created`)
+          res
+            .status(201)
+            .location(`/bookmarks/${bookmark.id}`)
+            .json(bookmark)
         })
-
-
+        .catch(next)
+  })
+ 
 bookmarksRouter
         .route('/bookmarks/:id')
         .get((req, res, next) => {
