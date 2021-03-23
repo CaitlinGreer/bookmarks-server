@@ -1,4 +1,5 @@
 const express = require('express')
+const xss = require('xss')
 const { v4: uuid } = require('uuid')
 const logger = require('../logger')
 const store = require('../store')
@@ -7,13 +8,21 @@ const BookmarksService = require('./bookmarks-service')
 const bookmarksRouter = express.Router()
 const bodyParser = express.json()
 
+const serializeBookmarks = bookmark => ({
+    id: bookmark.id,
+    title: xss(bookmark.title),
+    url: bookmark.url,
+    description: xss(bookmark.description),
+    rating: Number(bookmark.rating)
+  })
+
 bookmarksRouter // /bookmarks route
   .route('/')
 
   .get((req, res, next) => { // GET
     BookmarksService.getAllBookmarks(req.app.get('db'))
       .then(bookmarks => {
-        res.json(bookmarks)
+        res.json(bookmarks.map(serializeBookmarks))
       })
       .catch(next)
   })
@@ -46,47 +55,46 @@ bookmarksRouter // /bookmarks route
           res
             .status(201)
             .location(`/bookmarks/${bookmark.id}`)
-            .json(bookmark)
+            .json(serializeBookmarks(bookmark))
         })
         .catch(next)
-  })
+    })
  
-bookmarksRouter
-        .route('/bookmarks/:id')
-        .get((req, res, next) => {
-            const knexInstance = req.app.get('db')
-            BookmarksService.getById(knexInstance, req.params.id)
-                .then(bookmark=> {
-                    if (!bookmark) {
-                        return res.status(404).json({
-                            error: { message: `Bookmark doesn't exist` }
-                        })
-                    }
-                    res.json(bookmark)
-                })
-                .catch(next)
+    bookmarksRouter
+        .route('/:id')
+        .all((req, res, next) => {
+            BookmarksService.getById(
+                req.app.get('db'),   
+                req.params.id
+            )
+            .then(bookmark => {
+                if(!bookmark) {
+                    return res.status(404).json({
+                        error: { message: `Bookmark doesn't exist` }
+                    })
+                }
+                res.bookmark = bookmark
+                next()
+            })
+            .catch(next)
+            
         })
 
+        .get((req, res, next) => {
+            res.json(serializeBookmarks(res.bookmark))
+        })
 
-        .delete((req, res) => {
+        .delete((req, res, next) => {
             const { id } = req.params
 
-            const bookmarkIndex = store.bookmarks.findIndex( b => b.id == id)
-
-            if (bookmarkIndex === -1) {
-                logger.error(`Bookmark with id ${id} not found`)
-                return res
-                    .status(404)
-                    .send('Bookmark Not found')
-            }
-
-            store.bookmarks.splice(bookmarkIndex, 1)
-
-            logger.info(`Bookmark with id ${id} deleted`)
-
-            res
-                .status(204)
-                .end()
+            BookmarksService.deleteBookmark(
+                req.app.get('db'),
+                id
+            )
+            .then(() => {
+                res.status(204).end()
+            })
+            .catch(next)
         })
         
 
